@@ -14,12 +14,17 @@ clc;
 
 %% Read data
 
-Depth = imread('.\data\plastic\GroundTruth.png');
-Color = imread('.\data\plastic\Color.png');
+% Depth = imread('.\data\plastic\GroundTruth.png');
+% Color = imread('.\data\plastic\Color.png');
+Depth = imread('.\data\synthetic\truth1.png');
+Color = imread('.\data\synthetic\color1.png');
 
 %% Trim data if needed
-ColorSection = Color(381:420,231:250,:);
-DepthSection = Depth(381:420,231:250);
+% ColorSection = Color(101:300,101:300,:);
+% DepthSection = Depth(101:300,101:300);  % rgb2gray if needed
+ColorSection = Color;
+DepthSection = rgb2gray(Depth);  % rgb2gray if needed
+
 
 %% assert 
 if((size(DepthSection,1)~=size(ColorSection,1))||size(DepthSection,2)~=size(ColorSection,2))
@@ -38,7 +43,7 @@ Interval = 5;             % Down-sample factor
 BF_sigma_w = 3;	 % range sigma
 BF_sigma_c = 10;	 % spatial sigma
 BF_window = 8;	   	 % window size - radius
-BF_method = 2;		 % The method of bilateral filter  1: original bilateral filter 2: fast bilateral filter
+BF_method = 1;		 % The method of bilateral filter  1: original bilateral filter 2: fast bilateral filter
 
 % AD Parameters
 AD_sigma = 10;
@@ -47,7 +52,14 @@ AD_sigma = 10;
 % MRF Parameters
 MRF_sigma = 10;       % The parameter for the gaussion kernel in the smoothness term: exp(-D^2/(2*MRF_sigma^2))
 MRF_alpha = 1;       % The balance factor between data term and smoothness term: DataEnergy+alpha*smoothnessEnergy
-MRF_method = 2;	   	 % The method to solve MRF
+MRF_method = 1;	   	 % The method to solve MRF
+
+
+% MRF Parameters based on second order
+MRF_second_sigma = 10;       % The parameter for the gaussion kernel in the smoothness term: exp(-D^2/(2*MRF_sigma^2))
+MRF_second_lambda1 = 0;       % The balance factor between data term and first order smoothness term: 
+MRF_second_lambda2 = 1;       % The balance factor between data term and second order smoothness term: 
+
 
 % MRF Parameters based on Tensor
 MRF_Tensor_lamda = 1;         % The balance factor between IxIy and RGB in tensor: [Ix Iy lamda*R lamda*G lamda*B]'
@@ -62,9 +74,6 @@ MRF_Tensor_method = 1;		% The method to solve MRF
 % YIDepthInteval = 20;          % Depth slice interal
 % YIIterativeTime = 3;
 
-
-
-
 %% Generate the depth map in low resolution
 SamplePoints = zeros(Height,Width);
 StartPoint = floor(Interval/2) + 1;
@@ -75,9 +84,10 @@ HighResDepth = imresize(LowResDepth,Interval);                              %Int
 
 
 %% Choose models
-runBilateralFilter      =   false;
+runBilateralFilter      =   true;
 runAnisotropicDiffusion = 	false;  
 runMRF        			=   true;
+runMRFSecond            =   true;
 runMRFTensor	        =   false;
 runYangIteration		=   false;
 
@@ -107,7 +117,6 @@ end
 %%% Original MRF
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 if(runMRF)
-    tic
     if(MRF_method == 1)
         MRFResult = MRFUpsamplingEq(ColorSection,SampleDepth,MRF_sigma,MRF_alpha);
     elseif (MRF_method == 2)
@@ -115,7 +124,6 @@ if(runMRF)
     elseif (MRF_method == 3)
         MRFResult = MRFUpsamplingGC(ColorSection,SampleDepth,MRF_sigma,MRF_alpha);
     end
-    fprintf('$MRF:Total running time is %.5f s\n',toc)
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%       Yang's Iterative Depth Refinement           %%%
@@ -124,7 +132,12 @@ end
 %     YIResult=YangIteration(ColorSection,NLRDepth,Height,Width,YI_sigma_w,YI_sigma_c,YI_window,YIDepthInteval,YIIterativeTime);
 % end
 
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Second Order MRF
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+if(runMRFSecond)
+    MRFSecondResult = MRFUpsamplingEqO2(ColorSection,SampleDepth,MRF_second_sigma,MRF_second_lambda1,MRF_second_lambda2);
+end
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -167,6 +180,12 @@ if(runMRF)
     title('Original MRF')
 %     imwrite(uint8(MRFResult),'./result/MRFUpsample.png','png')
 end
+if(runMRFSecond)
+    figure;
+    imshow(uint8(MRFSecondResult),[0 255]);axis off
+    title('Second Order MRF ')
+%     imwrite(uint8(MRFResult),'./result/MRFUpsample.png','png')
+end
 if(runMRFTensor)
     figure;
     imshow(uint8(reshape(full(LSLSTensorResult),Height,Width)));axis off
@@ -174,18 +193,47 @@ if(runMRFTensor)
     imwrite(uint8(reshape(full(LSLSTensorResult),Height,Width)),'LSLSTensor.png','png')
 end
 
-% The results of some other methods cannot be seen here, please refer to the directory - "MRF2.1","Robust_PN" and"HDFilter"
-
 %% Quantative evaluation
+if(runBilateralFilter)
+    rmse = sqrt(sum(sum((double(BFResult) - double(DepthSection)).^2))/(Height*Width));
+    fprintf('RMSE of BF method is %.5f \n',rmse);
+end
+if(runMRF)
+    rmse = sqrt(sum(sum((double(MRFResult) - double(DepthSection)).^2))/(Height*Width));
+    fprintf('RMSE of MRF method is %.5f \n',rmse);
+end
+if(runMRFSecond)
+    rmse = sqrt(sum(sum((double(MRFSecondResult) - double(DepthSection)).^2))/(Height*Width));
+    fprintf('RMSE of MRF second order method is %.5f \n',rmse);
+end
 
-% QLSLSOriginal=reshape(full(LSLSOriginalResult),Height,Width);
-% QLSLSTensor=reshape(full(LSLSTensorResult),Height,Width);
-% Q1=abs(QLSLSOriginal-DepthSection);
-% Q2=abs(QLSLSTensor-DepthSection);
-% Q1=Q1(2:Height-1,2:Width-1);
-% Q2=Q2(2:Height-1,2:Width-1);
-% Q1_result=sqrt(sum(Q1(:))/(78*78));
-% Q2_result=sqrt(sum(Q2(:))/(78*78));
-%To be filled... 
 
 
+%% synthetic surf show
+[mu,mv] = meshgrid(1:Width,1:Height);
+figure;
+surf(mu,mv,double(DepthSection),'EdgeColor','flat');
+title('GroundTruth','Color',[1,1,1]);
+view(30,30);
+light('Posi',[1,0,1]);shading interp;axis off;set(gcf,'color',[0 0 0]);
+if(runBilateralFilter)
+    figure;
+    surf(mu,mv,BFResult);
+    title('BF method','Color',[1,1,1]);
+    view(30,30);
+    light('Posi',[1,0,1]);shading interp;axis off;set(gcf,'color',[0 0 0]);
+end
+if(runMRF)
+    figure;
+    surf(mu,mv,MRFResult,'EdgeColor','flat');
+    title('MRF method','Color',[1,1,1]);
+    view(30,30);
+    light('Posi',[1,0,1]);shading interp;axis off;set(gcf,'color',[0 0 0]);
+end
+if(runMRFSecond)
+    figure;
+    surf(mu,mv,MRFSecondResult);
+    title('MRF second method','Color',[1,1,1]);
+    view(30,30);
+    light('Posi',[1,0,1]);shading interp;axis off;set(gcf,'color',[0 0 0]);
+end
