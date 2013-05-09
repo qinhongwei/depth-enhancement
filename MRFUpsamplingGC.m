@@ -37,8 +37,9 @@ function result = MRFUpsamplingGC(color,depth,sigma,alpha)
             end
         end
     end
-    
+    tic
     [result E Eafter] = GCMex(initialDepth, single(unary), pairwise, single(labelcost),1);
-    
+    time = toc;
+    fprintf('MRFUpsampleGC: The running time is %.5f s', time);
     result = reshape(result,height,width);
     result = result * 5;

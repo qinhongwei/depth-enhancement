@@ -20,8 +20,8 @@ Color = imread('.\data\plastic\Color.png');
 % Color = imread('.\data\synthetic\color1.png');
 
 %% Trim data if needed
-ColorSection = Color(101:300,101:300,:);
-DepthSection = Depth(101:300,101:300);  % rgb2gray if needed
+ColorSection = Color(151:250,201:300,:);
+DepthSection = Depth(151:250,201:300);  % rgb2gray if needed
 % ColorSection = Color;
 % DepthSection = rgb2gray(Depth);  % rgb2gray if needed
 
@@ -58,7 +58,7 @@ MRF_method = 1;	   	 % The method to solve MRF
 
 % MRF Parameters based on second order
 MRF_second_sigma = 10;       % The parameter for the gaussion kernel in the smoothness term: exp(-D^2/(2*MRF_sigma^2))
-MRF_second_lambda1 = 0;       % The balance factor between data term and first order smoothness term: 
+MRF_second_lambda1 = 1;       % The balance factor between data term and first order smoothness term: 
 MRF_second_lambda2 = 1;       % The balance factor between data term and second order smoothness term: 
 
 
@@ -85,10 +85,10 @@ HighResDepth = imresize(LowResDepth,Interval);                              %Int
 
 
 %% Choose models
-runBilateralFilter      =   true;
+runBilateralFilter      =   false;
 runAnisotropicDiffusion = 	false;  
 runMRF        			=   true;
-runMRFSecond            =   true;
+runMRFSecond            =   false;
 runMRFTensor	        =   false;
 runYangIteration		=   false;
 
@@ -196,15 +196,15 @@ end
 
 %% Quantative evaluation
 if(runBilateralFilter)
-    rmse = sqrt(sum(sum((double(BFResult) - double(DepthSection)).^2))/(Height*Width));
+    rmse = sqrt(sum(sum((double(BFResult(DepthSection>0)) - double(DepthSection(DepthSection>0))).^2))/(numel((DepthSection>0))));
     fprintf('RMSE of BF method is %.5f \n',rmse);
 end
 if(runMRF)
-    rmse = sqrt(sum(sum((double(MRFResult) - double(DepthSection)).^2))/(Height*Width));
+    rmse = sqrt(sum(sum((double(MRFResult(DepthSection>0)) - double(DepthSection(DepthSection>0))).^2))/(numel((DepthSection>0))));
     fprintf('RMSE of MRF method is %.5f \n',rmse);
 end
 if(runMRFSecond)
-    rmse = sqrt(sum(sum((double(MRFSecondResult) - double(DepthSection)).^2))/(Height*Width));
+    rmse = sqrt(sum(sum((double(MRFSecondResult(DepthSection>0)) - double(DepthSection(DepthSection>0))).^2))/(numel((DepthSection>0))));
     fprintf('RMSE of MRF second order method is %.5f \n',rmse);
 end
 

@@ -34,14 +34,14 @@ function result = MRFUpsamplingCG(color,depth,sigma,alpha)
 %     load('list.mat');
     [cost, grad] = MRfCostFunction(initialDepth, depth, list, alpha);
     
-    % Now we can use it to check your cost function and derivative calculations
-    % for the sparse autoencoder.  
-    numgrad = computeNumericalGradient( @(x) MRfCostFunction(x, depth,...
-                                                              list, alpha),... 
-                                                              initialDepth);
-%     disp([numgrad1 grad]);
-    diff = norm(numgrad-grad)/norm(numgrad+grad);
-    disp(diff); % Should be small. 
+%     % Now we can use it to check your cost function and derivative calculations
+%     % for the sparse autoencoder.  
+%     numgrad = computeNumericalGradient( @(x) MRfCostFunction(x, depth,...
+%                                                               list, alpha),... 
+%                                                               initialDepth);
+% %     disp([numgrad1 grad]);
+%     diff = norm(numgrad-grad)/norm(numgrad+grad);
+%     disp(diff); % Should be small. 
 
     
     %  Set options for fminunc
