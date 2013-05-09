@@ -14,16 +14,16 @@ clc;
 
 %% Read data
 
-% Depth = imread('.\data\plastic\GroundTruth.png');
-% Color = imread('.\data\plastic\Color.png');
-Depth = imread('.\data\synthetic\truth1.png');
-Color = imread('.\data\synthetic\color1.png');
+Depth = imread('.\data\plastic\GroundTruth.png');
+Color = imread('.\data\plastic\Color.png');
+% Depth = imread('.\data\synthetic\truth1.png');
+% Color = imread('.\data\synthetic\color1.png');
 
 %% Trim data if needed
-% ColorSection = Color(101:300,101:300,:);
-% DepthSection = Depth(101:300,101:300);  % rgb2gray if needed
-ColorSection = Color;
-DepthSection = rgb2gray(Depth);  % rgb2gray if needed
+ColorSection = Color(101:300,101:300,:);
+DepthSection = Depth(101:300,101:300);  % rgb2gray if needed
+% ColorSection = Color;
+% DepthSection = rgb2gray(Depth);  % rgb2gray if needed
 
 
 %% assert 
@@ -38,6 +38,7 @@ Width = size(DepthSection,2);
 
 % Scaling Factor
 Interval = 5;             % Down-sample factor
+view_3d = 0;              % View the 3D depth or not
 
 % BilateralFilter 
 BF_sigma_w = 3;	 % range sigma
@@ -210,30 +211,32 @@ end
 
 
 %% synthetic surf show
-[mu,mv] = meshgrid(1:Width,1:Height);
-figure;
-surf(mu,mv,double(DepthSection),'EdgeColor','flat');
-title('GroundTruth','Color',[1,1,1]);
-view(30,30);
-light('Posi',[1,0,1]);shading interp;axis off;set(gcf,'color',[0 0 0]);
-if(runBilateralFilter)
+if(view_3d)
+    [mu,mv] = meshgrid(1:Width,1:Height);
     figure;
-    surf(mu,mv,BFResult);
-    title('BF method','Color',[1,1,1]);
+    surf(mu,mv,double(DepthSection),'EdgeColor','flat');
+    title('GroundTruth','Color',[1,1,1]);
     view(30,30);
     light('Posi',[1,0,1]);shading interp;axis off;set(gcf,'color',[0 0 0]);
-end
-if(runMRF)
-    figure;
-    surf(mu,mv,MRFResult,'EdgeColor','flat');
-    title('MRF method','Color',[1,1,1]);
-    view(30,30);
-    light('Posi',[1,0,1]);shading interp;axis off;set(gcf,'color',[0 0 0]);
-end
-if(runMRFSecond)
-    figure;
-    surf(mu,mv,MRFSecondResult);
-    title('MRF second method','Color',[1,1,1]);
-    view(30,30);
-    light('Posi',[1,0,1]);shading interp;axis off;set(gcf,'color',[0 0 0]);
+    if(runBilateralFilter)
+        figure;
+        surf(mu,mv,BFResult);
+        title('BF method','Color',[1,1,1]);
+        view(30,30);
+        light('Posi',[1,0,1]);shading interp;axis off;set(gcf,'color',[0 0 0]);
+    end
+    if(runMRF)
+        figure;
+        surf(mu,mv,MRFResult,'EdgeColor','flat');
+        title('MRF method','Color',[1,1,1]);
+        view(30,30);
+        light('Posi',[1,0,1]);shading interp;axis off;set(gcf,'color',[0 0 0]);
+    end
+    if(runMRFSecond)
+        figure;
+        surf(mu,mv,MRFSecondResult);
+        title('MRF second method','Color',[1,1,1]);
+        view(30,30);
+        light('Posi',[1,0,1]);shading interp;axis off;set(gcf,'color',[0 0 0]);
+    end
 end
