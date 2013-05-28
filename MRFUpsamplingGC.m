@@ -24,22 +24,22 @@ function result = MRFUpsamplingGC(color,depth,sigma,alpha)
     smallDepth = reshape(depthSec,smallHeight,smallWidth);
     
     bicubicDepth = imresize(smallDepth,[height,width]);
-    initialDepth = floor(reshape(bicubicDepth,pixelNumber,1)/5);
+    initialDepth = floor(reshape(bicubicDepth,pixelNumber,1)/1);
     pairwise = ColorSmoothnessN_N(color,sigma);
-    [X Y] = meshgrid(0:51, 0:51);
+    [X Y] = meshgrid(0:255, 0:255);
     labelcost = min(10, (X - Y).*(X - Y));
     % compute unary term
-    unary = zeros(52,pixelNumber);
+    unary = zeros(256,pixelNumber);
     for i=1:width
         for j=1:height
             if(depth(j,i) ~= 0)
-                unary(:,j+(i-1)*height)=min((linspace(0,51,52)-floor(depth(j,i)/5)).^2,100);
+                unary(:,j+(i-1)*height)=min((linspace(0,255,256)-floor(depth(j,i)/1)).^2,100);
             end
         end
     end
-    tic
+    tic;
     [result E Eafter] = GCMex(initialDepth, single(unary), pairwise, single(labelcost),1);
     time = toc;
     fprintf('MRFUpsampleGC: The running time is %.5f s', time);
     result = reshape(result,height,width);
-    result = result * 5;
+    result = result * 1;
