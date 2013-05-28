@@ -14,14 +14,15 @@ clc;
 
 %% Read data
 
-Depth = imread('.\data\plastic\GroundTruth.png');
-Color = imread('.\data\plastic\Color.png');
+Depth = imread('.\data\art\GroundTruth.png');
+Color = imread('.\data\art\Color.png');
 % Depth = imread('.\data\synthetic\truth1.png');
 % Color = imread('.\data\synthetic\color1.png');
 
 %% Trim data if needed
-ColorSection = Color(151:250,201:300,:);
-DepthSection = Depth(151:250,201:300);  % rgb2gray if needed
+ColorSection = Color(451:650,751:950,:);
+DepthSection = Depth(451:650,751:950);  % rgb2gray if needed
+DepthSection = uint8(DepthSection < 120) * 100 + uint8(DepthSection > 120) * 170;
 % ColorSection = Color;
 % DepthSection = rgb2gray(Depth);  % rgb2gray if needed
 
@@ -85,7 +86,7 @@ HighResDepth = imresize(LowResDepth,Interval);                              %Int
 
 
 %% Choose models
-runBilateralFilter      =   false;
+runBilateralFilter      =   true;
 runAnisotropicDiffusion = 	false;  
 runMRF        			=   true;
 runMRFSecond            =   false;
