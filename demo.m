@@ -14,17 +14,19 @@ clc;
 
 %% Read data
 
-Depth = imread('.\data\art\GroundTruth.png');
-Color = imread('.\data\art\Color.png');
+Depth = imread('.\data\teddy\GroundTruth.png');
+% Depth = imresize(Depth,1/3);
+Color = imread('.\data\teddy\Color.png');
+% Color = imresize(Color,1/3);
 % Depth = imread('.\data\synthetic\truth1.png');
 % Color = imread('.\data\synthetic\color1.png');
 
 %% Trim data if needed
-ColorSection = Color(451:650,751:950,:);
-DepthSection = Depth(451:650,751:950);  % rgb2gray if needed
-DepthSection = uint8(DepthSection < 120) * 100 + uint8(DepthSection > 120) * 170;
-% ColorSection = Color;
-% DepthSection = rgb2gray(Depth);  % rgb2gray if needed
+% ColorSection = Color(451:650,751:950,:);
+% DepthSection = Depth(451:650,751:950);  % rgb2gray if needed
+% DepthSection = uint8(DepthSection < 120) * 100 + uint8(DepthSection > 120) * 170;
+ColorSection = Color;
+DepthSection = Depth;  % rgb2gray if needed
 
 
 %% assert 
@@ -42,9 +44,9 @@ Interval = 5;             % Down-sample factor
 view_3d = 0;              % View the 3D depth or not
 
 % BilateralFilter 
-BF_sigma_w = 3;	 % range sigma
-BF_sigma_c = 10;	 % spatial sigma
-BF_window = 8;	   	 % window size - radius
+BF_sigma_w = 4;	 % range sigma
+BF_sigma_c = 15;	 % spatial sigma
+BF_window = 10;	   	 % window size - radius
 BF_method = 1;		 % The method of bilateral filter  1: original bilateral filter 2: fast bilateral filter
 
 % AD Parameters
@@ -52,7 +54,7 @@ AD_sigma = 10;
 
 
 % MRF Parameters
-MRF_sigma = 10;       % The parameter for the gaussion kernel in the smoothness term: exp(-D^2/(2*MRF_sigma^2))
+MRF_sigma = 15;       % The parameter for the gaussion kernel in the smoothness term: exp(-D^2/(2*MRF_sigma^2))
 MRF_alpha = 1;       % The balance factor between data term and smoothness term: DataEnergy+alpha*smoothnessEnergy
 MRF_method = 1;	   	 % The method to solve MRF
 
@@ -168,7 +170,7 @@ if(runBilateralFilter)
     figure;
     imshow(BFResult,[0 255]);axis off
     title('Bilateral Filter')
-%     imwrite(uint8(BFResult),'./result/BilateralFilter.png','png')
+    imwrite(uint8(BFResult),'./result/BilateralFilter.png','png')
 end
 if(runYangIteration)
     figure;
@@ -180,7 +182,7 @@ if(runMRF)
     figure;
     imshow(uint8(MRFResult),[0 255]);axis off
     title('Original MRF')
-%     imwrite(uint8(MRFResult),'./result/MRFUpsample.png','png')
+    imwrite(uint8(MRFResult),'./result/MRFUpsample.png','png')
 end
 if(runMRFSecond)
     figure;
@@ -197,15 +199,15 @@ end
 
 %% Quantative evaluation
 if(runBilateralFilter)
-    rmse = sqrt(sum(sum((double(BFResult(DepthSection>0)) - double(DepthSection(DepthSection>0))).^2))/(numel((DepthSection>0))));
+    rmse = sqrt(sum(sum((double(BFResult(DepthSection>0)) - double(DepthSection(DepthSection>0))).^2))/sum(sum((DepthSection>0))));
     fprintf('RMSE of BF method is %.5f \n',rmse);
 end
 if(runMRF)
-    rmse = sqrt(sum(sum((double(MRFResult(DepthSection>0)) - double(DepthSection(DepthSection>0))).^2))/(numel((DepthSection>0))));
+    rmse = sqrt(sum(sum((double(MRFResult(DepthSection>0)) - double(DepthSection(DepthSection>0))).^2))/sum(sum((DepthSection>0))));
     fprintf('RMSE of MRF method is %.5f \n',rmse);
 end
 if(runMRFSecond)
-    rmse = sqrt(sum(sum((double(MRFSecondResult(DepthSection>0)) - double(DepthSection(DepthSection>0))).^2))/(numel((DepthSection>0))));
+    rmse = sqrt(sum(sum((double(MRFSecondResult(DepthSection>0)) - double(DepthSection(DepthSection>0))).^2))/sum(sum((DepthSection>0))));
     fprintf('RMSE of MRF second order method is %.5f \n',rmse);
 end
 
