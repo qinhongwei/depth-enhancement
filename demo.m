@@ -14,9 +14,9 @@ clc;
 
 %% Read data
 
-Depth = imread('.\data\teddy\GroundTruth.png');
+Depth = imread('.\data\synthetic\depth2.png');
 % Depth = imresize(Depth,1/3);
-Color = imread('.\data\teddy\Color.png');
+Color = imread('.\data\synthetic\color2.png');
 % Color = imresize(Color,1/3);
 % Depth = imread('.\data\synthetic\truth1.png');
 % Color = imread('.\data\synthetic\color1.png');
@@ -26,8 +26,10 @@ Color = imread('.\data\teddy\Color.png');
 % DepthSection = Depth(451:650,751:950);  % rgb2gray if needed
 % DepthSection = uint8(DepthSection < 120) * 100 + uint8(DepthSection > 120) * 170;
 ColorSection = Color;
-DepthSection = Depth;  % rgb2gray if needed
-
+DepthSection = rgb2gray(Depth);  % rgb2gray if needed
+for i = 1:100
+    DepthSection(i,:) = i;
+end
 
 %% assert 
 if((size(DepthSection,1)~=size(ColorSection,1))||size(DepthSection,2)~=size(ColorSection,2))
@@ -40,8 +42,8 @@ Width = size(DepthSection,2);
 %% Set Parameters
 
 % Scaling Factor
-Interval = 5;             % Down-sample factor
-view_3d = 0;              % View the 3D depth or not
+Interval = 10;             % Down-sample factor
+view_3d = 1;              % View the 3D depth or not
 
 % BilateralFilter 
 BF_sigma_w = 4;	 % range sigma
@@ -55,14 +57,20 @@ AD_sigma = 10;
 
 % MRF Parameters
 MRF_sigma = 15;       % The parameter for the gaussion kernel in the smoothness term: exp(-D^2/(2*MRF_sigma^2))
-MRF_alpha = 1;       % The balance factor between data term and smoothness term: DataEnergy+alpha*smoothnessEnergy
+MRF_alpha = 0.5;       % The balance factor between data term and smoothness term: DataEnergy+alpha*smoothnessEnergy
 MRF_method = 1;	   	 % The method to solve MRF
 
 
 % MRF Parameters based on second order
 MRF_second_sigma = 10;       % The parameter for the gaussion kernel in the smoothness term: exp(-D^2/(2*MRF_sigma^2))
-MRF_second_lambda1 = 1;       % The balance factor between data term and first order smoothness term: 
+MRF_second_lambda1 = 0.1;       % The balance factor between data term and first order smoothness term: 
 MRF_second_lambda2 = 1;       % The balance factor between data term and second order smoothness term: 
+
+% MRF Parameters based on second order
+MRF_kernelData_smoothSigma = 10;       % The parameter for the gaussion kernel in the smoothness term: exp(-D^2/(2*MRF_sigma^2))
+MRF_kernelData_dataSigma = 1;
+MRF_kernelData_dataWindow = 3;
+MRF_kernelData_alpha = 0.1;    % The balance factor between data term and smoothness term: DataEnergy+alpha*smoothnessEnergy
 
 
 % MRF Parameters based on Tensor
@@ -88,10 +96,11 @@ HighResDepth = imresize(LowResDepth,Interval);                              %Int
 
 
 %% Choose models
-runBilateralFilter      =   true;
+runBilateralFilter      =   false;
 runAnisotropicDiffusion = 	false;  
 runMRF        			=   true;
 runMRFSecond            =   false;
+runMRFKernelData        =   true;
 runMRFTensor	        =   false;
 runYangIteration		=   false;
 
@@ -143,7 +152,12 @@ if(runMRFSecond)
     MRFSecondResult = MRFUpsamplingEqO2(ColorSection,SampleDepth,MRF_second_sigma,MRF_second_lambda1,MRF_second_lambda2);
 end
 
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Kernel Data Term MRF
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+if(runMRFKernelData)
+    MRFKernelResult = MRFUpsamplingEqKernelData(ColorSection,SampleDepth,MRF_kernelData_smoothSigma,MRF_kernelData_alpha,MRF_kernelData_dataSigma,MRF_kernelData_dataWindow);
+end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% MRF + Tensor; Solve a Large Sparse Linear System  %%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
