@@ -14,22 +14,21 @@ clc;
 
 %% Read data
 
-Depth = imread('.\data\synthetic\depth2.png');
-% Depth = imresize(Depth,1/3);
-Color = imread('.\data\synthetic\color2.png');
-% Color = imresize(Color,1/3);
+Depth = imread('.\data\art\GroundTruth.png');
+Depth = imresize(Depth,1/2,'nearest');
+Color = imread('.\data\art\Color.png');
+Color = imresize(Color,1/2,'nearest');
 % Depth = imread('.\data\synthetic\truth1.png');
 % Color = imread('.\data\synthetic\color1.png');
 
 %% Trim data if needed
 % ColorSection = Color(451:650,751:950,:);
 % DepthSection = Depth(451:650,751:950);  % rgb2gray if needed
-% DepthSection = uint8(DepthSection < 120) * 100 + uint8(DepthSection > 120) * 170;
 ColorSection = Color;
-DepthSection = rgb2gray(Depth);  % rgb2gray if needed
-for i = 1:100
-    DepthSection(i,:) = i;
-end
+DepthSection = Depth;  % rgb2gray if needed
+% for i = 1:100
+%     DepthSection(i,:) = i;
+% end
 
 %% assert 
 if((size(DepthSection,1)~=size(ColorSection,1))||size(DepthSection,2)~=size(ColorSection,2))
@@ -42,8 +41,8 @@ Width = size(DepthSection,2);
 %% Set Parameters
 
 % Scaling Factor
-Interval = 10;             % Down-sample factor
-view_3d = 1;              % View the 3D depth or not
+Interval = 5;             % Down-sample factor
+view_3d = 0;              % View the 3D depth or not
 
 % BilateralFilter 
 BF_sigma_w = 4;	 % range sigma
@@ -57,20 +56,20 @@ AD_sigma = 10;
 
 % MRF Parameters
 MRF_sigma = 15;       % The parameter for the gaussion kernel in the smoothness term: exp(-D^2/(2*MRF_sigma^2))
-MRF_alpha = 0.5;       % The balance factor between data term and smoothness term: DataEnergy+alpha*smoothnessEnergy
+MRF_alpha = 0.4;       % The balance factor between data term and smoothness term: DataEnergy+alpha*smoothnessEnergy
 MRF_method = 1;	   	 % The method to solve MRF
 
 
 % MRF Parameters based on second order
-MRF_second_sigma = 10;       % The parameter for the gaussion kernel in the smoothness term: exp(-D^2/(2*MRF_sigma^2))
+MRF_second_sigma = 15;       % The parameter for the gaussion kernel in the smoothness term: exp(-D^2/(2*MRF_sigma^2))
 MRF_second_lambda1 = 0.1;       % The balance factor between data term and first order smoothness term: 
 MRF_second_lambda2 = 1;       % The balance factor between data term and second order smoothness term: 
 
 % MRF Parameters based on second order
-MRF_kernelData_smoothSigma = 10;       % The parameter for the gaussion kernel in the smoothness term: exp(-D^2/(2*MRF_sigma^2))
-MRF_kernelData_dataSigma = 1;
-MRF_kernelData_dataWindow = 3;
-MRF_kernelData_alpha = 0.1;    % The balance factor between data term and smoothness term: DataEnergy+alpha*smoothnessEnergy
+MRF_kernelData_smoothSigma = 15;       % The parameter for the gaussion kernel in the smoothness term: exp(-D^2/(2*MRF_sigma^2))
+MRF_kernelData_dataSigma = 2;
+MRF_kernelData_dataWindow = 4;
+MRF_kernelData_alpha = 0.4;    % The balance factor between data term and smoothness term: DataEnergy+alpha*smoothnessEnergy
 
 
 % MRF Parameters based on Tensor
@@ -204,6 +203,13 @@ if(runMRFSecond)
     title('Second Order MRF ')
 %     imwrite(uint8(MRFResult),'./result/MRFUpsample.png','png')
 end
+if(runMRFKernelData)
+    figure;
+    imshow(uint8(MRFKernelResult),[0 255]);axis off
+    title('Kernel Data Term MRF ')
+%     imwrite(uint8(MRFResult),'./result/MRFUpsample.png','png')
+end
+
 if(runMRFTensor)
     figure;
     imshow(uint8(reshape(full(LSLSTensorResult),Height,Width)));axis off
@@ -224,7 +230,10 @@ if(runMRFSecond)
     rmse = sqrt(sum(sum((double(MRFSecondResult(DepthSection>0)) - double(DepthSection(DepthSection>0))).^2))/sum(sum((DepthSection>0))));
     fprintf('RMSE of MRF second order method is %.5f \n',rmse);
 end
-
+if(runMRFKernelData)
+    rmse = sqrt(sum(sum((double(MRFKernelResult(DepthSection>0)) - double(DepthSection(DepthSection>0))).^2))/sum(sum((DepthSection>0))));
+    fprintf('RMSE of MRF kernel data method is %.5f \n',rmse);
+end
 
 
 %% synthetic surf show

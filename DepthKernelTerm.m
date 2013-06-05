@@ -23,16 +23,13 @@ function output = DepthKernelTerm(depth,sigma,w)
     idx = find(z>0);
     validNum = length(idx);
     kernelNum = numel(spatial);
-    x=zeros(1,validNum * kernelNum * 2);
-    y=zeros(1,validNum * kernelNum * 2);
-    s=zeros(1,validNum * kernelNum * 2);
+    x=zeros(1,validNum * kernelNum);
+    y=zeros(1,validNum * kernelNum);
+    s=zeros(1,validNum * kernelNum);
     for i = 1:length(idx)
-        x( 2 * (i - 1) * kernelNum + 1: 2 * i * kernelNum - kernelNum) = (i - 1) * kernelNum + 1: i * kernelNum;
-        y( 2 * (i - 1) * kernelNum + 1: 2 * i * kernelNum - kernelNum) = idx(i);
-        s( 2 * (i - 1) * kernelNum + 1: 2 * i * kernelNum - kernelNum) = spatial(:);
-        x( 2 * i * kernelNum - kernelNum + 1 : 2 * i * kernelNum) = (i - 1) * kernelNum + 1: i * kernelNum;
-        y( 2 * i * kernelNum - kernelNum + 1 : 2 * i * kernelNum) = idx(i) + my(:) + mx(:) * inputHeight;
-        s( 2 * i * kernelNum - kernelNum + 1 : 2 * i * kernelNum) = -spatial(:);
+        x( (i - 1) * kernelNum + 1: i * kernelNum ) = (i - 1) * kernelNum + 1: i * kernelNum;
+        y( (i - 1) * kernelNum + 1: i * kernelNum ) = idx(i);
+        s( (i - 1) * kernelNum + 1: i * kernelNum ) = spatial(:);
     end
-    output=sparse(x,y,s,validNum * kernelNum, inputHeight*inputWidth);
+    output=sparse(x,y,s,validNum * kernelNum, pixelNumber);
 end

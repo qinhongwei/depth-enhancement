@@ -26,6 +26,10 @@ function result = MRFUpsamplingEqKernelData(color,depth,sigma,alpha,dSigma,dWind
     width = size(color,2);
     pixelNumber = height * width;
     
+    %Depth Matrix - N*1
+    depth = double(depth);
+    Z = sparse(reshape(depth,pixelNumber,1));
+    
     %Data Term Matrix - N*N
     W = DepthKernelTerm(depth,dSigma,dWindow);
     
@@ -35,7 +39,7 @@ function result = MRFUpsamplingEqKernelData(color,depth,sigma,alpha,dSigma,dWind
     S = ColorSmoothnessTerm(color,sigma);
 %     save(savefile,'S','S2');
     SmoothnessTime = toc;
-    fprintf('MRF_Upsampling_Eq:The running time of generating the pairwise matrix is %.5f s\n',SmoothnessTime)
+    fprintf('MRF_Upsampling_EqKernelData:The running time of generating the pairwise matrix is %.5f s\n',SmoothnessTime)
     
     %Compute the A and b
     tic;
@@ -44,18 +48,18 @@ function result = MRFUpsamplingEqKernelData(color,depth,sigma,alpha,dSigma,dWind
     A = alpha*A1 + A2;
     b = W'*W*Z;
     MatrixGenerateTime = toc;
-    fprintf('MRF_Upsampling_Eq:The running time of getting A and b is %.5f s\n',MatrixGenerateTime)
+    fprintf('MRF_Upsampling_EqKernelData:The running time of getting A and b is %.5f s\n',MatrixGenerateTime)
     
     %Using Backslash to solve the Ax=b
     tic;
     Result = A\b;
     BackslashTime = toc;
-    fprintf('MRF_Upsampling_Eq:The running time of solving Ax=b by Backslash is %.5f s\n',BackslashTime)
+    fprintf('MRF_Upsampling_EqKernelData:The running time of solving Ax=b by Backslash is %.5f s\n',BackslashTime)
     
     result = full(reshape(double(Result),height,width));
     result(1) = result(2);
     result(height) = result(height-1);
     result(height*width - height + 1) = result(height*width - height + 2) ;
     result(height*width) = result(height*width-1);
-    fprintf('MRF_Upsampling_Eq:Done!\n')
+    fprintf('MRF_Upsampling_EqKernelData:Done!\n')
 end
