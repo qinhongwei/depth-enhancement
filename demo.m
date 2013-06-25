@@ -14,12 +14,12 @@ clc;
 
 %% Read data
 
-Depth = imread('.\data\art\GroundTruth.png');
-Depth = imresize(Depth,1/2,'nearest');
-Color = imread('.\data\art\Color.png');
-Color = imresize(Color,1/2,'nearest');
-% Depth = imread('.\data\synthetic\truth1.png');
-% Color = imread('.\data\synthetic\color1.png');
+Depth = imread('.\data\plastic\GroundTruth.png');
+% Depth = imresize(Depth,1/2,'nearest');
+Color = imread('.\data\plastic\Color.png');
+% Color = imresize(Color,1/2,'nearest');
+% Depth = imread('.\data\synthetic\depth2.png');
+% Color = imread('.\data\synthetic\color2.png');
 
 %% Trim data if needed
 % ColorSection = Color(451:650,751:950,:);
@@ -45,18 +45,23 @@ Interval = 5;             % Down-sample factor
 view_3d = 0;              % View the 3D depth or not
 
 % BilateralFilter 
-BF_sigma_w = 4;	 % range sigma
-BF_sigma_c = 15;	 % spatial sigma
-BF_window = 10;	   	 % window size - radius
+BF_sigma_w = 3;	 % range sigma
+BF_sigma_c = 10;	 % spatial sigma
+BF_window = 8;	   	 % window size - radius
 BF_method = 1;		 % The method of bilateral filter  1: original bilateral filter 2: fast bilateral filter
+
+% BilateralUpsample
+BU_sigma_w = 0.5;
+BU_sigma_c = 10;
+BU_window = 2;
 
 % AD Parameters
 AD_sigma = 10;
 
 
 % MRF Parameters
-MRF_sigma = 15;       % The parameter for the gaussion kernel in the smoothness term: exp(-D^2/(2*MRF_sigma^2))
-MRF_alpha = 0.4;       % The balance factor between data term and smoothness term: DataEnergy+alpha*smoothnessEnergy
+MRF_sigma = 10;       % The parameter for the gaussion kernel in the smoothness term: exp(-D^2/(2*MRF_sigma^2))
+MRF_alpha = 1;       % The balance factor between data term and smoothness term: DataEnergy+alpha*smoothnessEnergy
 MRF_method = 1;	   	 % The method to solve MRF
 
 
@@ -66,10 +71,10 @@ MRF_second_lambda1 = 0.1;       % The balance factor between data term and first
 MRF_second_lambda2 = 1;       % The balance factor between data term and second order smoothness term: 
 
 % MRF Parameters based on second order
-MRF_kernelData_smoothSigma = 15;       % The parameter for the gaussion kernel in the smoothness term: exp(-D^2/(2*MRF_sigma^2))
-MRF_kernelData_dataSigma = 2;
-MRF_kernelData_dataWindow = 4;
-MRF_kernelData_alpha = 0.4;    % The balance factor between data term and smoothness term: DataEnergy+alpha*smoothnessEnergy
+MRF_kernelData_smoothSigma = 10;       % The parameter for the gaussion kernel in the smoothness term: exp(-D^2/(2*MRF_sigma^2))
+MRF_kernelData_dataSigma = 1;
+MRF_kernelData_dataWindow = 3;
+MRF_kernelData_alpha = 1;    % The balance factor between data term and smoothness term: DataEnergy+alpha*smoothnessEnergy
 
 
 % MRF Parameters based on Tensor
@@ -87,7 +92,7 @@ MRF_Tensor_method = 1;		% The method to solve MRF
 
 %% Generate the depth map in low resolution
 SamplePoints = zeros(Height,Width);
-StartPoint = floor(Interval/2) + 1;
+StartPoint = Interval;
 SamplePoints(StartPoint:Interval:end,StartPoint:Interval:end) = 1;                 
 SampleDepth = SamplePoints.*double(DepthSection);
 LowResDepth = DepthSection(StartPoint:Interval:end,StartPoint:Interval:end);      %Sample the low resolution Depth Map
@@ -95,11 +100,12 @@ HighResDepth = imresize(LowResDepth,Interval);                              %Int
 
 
 %% Choose models
-runBilateralFilter      =   false;
+runBilateralFilter      =   true;
+runBilateralUpsample    =   true;
 runAnisotropicDiffusion = 	false;  
-runMRF        			=   true;
+runMRF        			=   false;
 runMRFSecond            =   false;
-runMRFKernelData        =   true;
+runMRFKernelData        =   false;
 runMRFTensor	        =   false;
 runYangIteration		=   false;
 
@@ -124,7 +130,14 @@ end
 % if(runAnisotropicDiffusion)
 %     
 % end
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%   Bilateral Filter                
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+if(runBilateralUpsample)
+	tic
+    JBUResult = JointBilateralUpsample(ColorSection,LowResDepth,Interval,BU_sigma_w,BU_sigma_c,BU_window);
+	fprintf('$BU:Total running time is %.5f s\n',toc)
+end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Original MRF
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -185,6 +198,12 @@ if(runBilateralFilter)
     title('Bilateral Filter')
     imwrite(uint8(BFResult),'./result/BilateralFilter.png','png')
 end
+if(runBilateralUpsample)
+    figure;
+    imshow(JBUResult,[0 255]);axis off
+    title('Joint Bilateral Upsample')
+    imwrite(uint8(BFResult),'./result/JointBilateralFilter.png','png')
+end
 if(runYangIteration)
     figure;
     imshow(YIResult,[0 255]);axis off;
@@ -201,7 +220,7 @@ if(runMRFSecond)
     figure;
     imshow(uint8(MRFSecondResult),[0 255]);axis off
     title('Second Order MRF ')
-%     imwrite(uint8(MRFResult),'./result/MRFUpsample.png','png')
+%    imwrite(uint8(MRFResult),'./result/MRFUpsample.png','png')
 end
 if(runMRFKernelData)
     figure;

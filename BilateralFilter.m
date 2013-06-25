@@ -44,8 +44,8 @@ function result = BilateralFilter(color,depth,sigma_w,sigma_c,w)
              range = exp( -(dR.^2 + dG.^2 + dB.^2) / (2*sigma_c^2));
 
              % Calculate bilateral filter response.
-             depth_sum = depth_sec .* range .* spatial((iMin:iMax)-i+w+1,(jMin:jMax)-j+w+1);
              depth_weight = (depth_sec>0) .* range .* spatial((iMin:iMax)-i+w+1,(jMin:jMax)-j+w+1);
+             depth_sum = depth_sec .* depth_weight;
              result(i,j) = sum(depth_sum(:)) / sum(depth_weight(:));
         end
     end
