@@ -14,19 +14,19 @@ clc;
 
 %% Read data
 
-Depth = imread('.\data\plastic\GroundTruth.png');
+Depth = imread('.\data\teddy\GroundTruth.png');
 % Depth = imresize(Depth,1/2,'nearest');
-Color = imread('.\data\plastic\Color.png');
+Color = imread('.\data\teddy\Color.png');
 % Color = imresize(Color,1/2,'nearest');
-% Depth = imread('.\data\synthetic\depth2.png');
-% Color = imread('.\data\synthetic\color2.png');
+% Depth = imread('.\data\synthetic\depth3.png');
+% Color = imread('.\data\synthetic\color3.png');
 
 %% Trim data if needed
 % ColorSection = Color(451:650,751:950,:);
 % DepthSection = Depth(451:650,751:950);  % rgb2gray if needed
 ColorSection = Color;
 DepthSection = Depth;  % rgb2gray if needed
-% for i = 1:100
+% for i = 1:150
 %     DepthSection(i,:) = i;
 % end
 
@@ -42,7 +42,7 @@ Width = size(DepthSection,2);
 
 % Scaling Factor
 Interval = 5;             % Down-sample factor
-view_3d = 0;              % View the 3D depth or not
+view_3d = 1;              % View the 3D depth or not
 
 % BilateralFilter 
 BF_sigma_w = 3;	 % range sigma
@@ -54,6 +54,8 @@ BF_method = 1;		 % The method of bilateral filter  1: original bilateral filter 
 BU_sigma_w = 0.5;
 BU_sigma_c = 10;
 BU_window = 2;
+% Noise-ware Filter
+NAU_sigma_d = 2;
 
 % AD Parameters
 AD_sigma = 10;
@@ -96,12 +98,14 @@ StartPoint = Interval;
 SamplePoints(StartPoint:Interval:end,StartPoint:Interval:end) = 1;                 
 SampleDepth = SamplePoints.*double(DepthSection);
 LowResDepth = DepthSection(StartPoint:Interval:end,StartPoint:Interval:end);      %Sample the low resolution Depth Map
-HighResDepth = imresize(LowResDepth,Interval);                              %Interpolating to the Normal size
+HighResDepth = imresize(LowResDepth,Interval,'nearest');                              %Interpolating to the Normal size
 
 
 %% Choose models
 runBilateralFilter      =   true;
-runBilateralUpsample    =   true;
+runBilateralUpsample    =   false;
+runNoiseAwareFilter     =   false;
+runWeightModeFilter     =   true;
 runAnisotropicDiffusion = 	false;  
 runMRF        			=   false;
 runMRFSecond            =   false;
@@ -131,12 +135,29 @@ end
 %     
 % end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%   Bilateral Filter                
+%%%   Bilateral Upsampling       
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 if(runBilateralUpsample)
 	tic
     JBUResult = JointBilateralUpsample(ColorSection,LowResDepth,Interval,BU_sigma_w,BU_sigma_c,BU_window);
 	fprintf('$BU:Total running time is %.5f s\n',toc)
+end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%   Noise-aware Filter     
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+if(runNoiseAwareFilter)
+	tic
+    NAFResult = NoiseAwareFilter(ColorSection,LowResDepth,Interval,BU_sigma_w,BU_sigma_c,NAU_sigma_d,BU_window);
+	fprintf('$NAF:Total running time is %.5f s\n',toc)
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%   Weight Mode Filter 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+if(runWeightModeFilter)
+	tic
+    WMFResult = WeightedModeFilter(ColorSection,SampleDepth,BF_sigma_w,BF_sigma_c,BF_window);
+	fprintf('$WMF:Total running time is %.5f s\n',toc)
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Original MRF
@@ -202,7 +223,19 @@ if(runBilateralUpsample)
     figure;
     imshow(JBUResult,[0 255]);axis off
     title('Joint Bilateral Upsample')
-    imwrite(uint8(BFResult),'./result/JointBilateralFilter.png','png')
+    imwrite(uint8(JBUResult),'./result/JointBilateralFilter.png','png')
+end
+if(runNoiseAwareFilter)
+    figure;
+    imshow(NAFResult,[0 255]);axis off
+    title('Noise aware filter')
+    imwrite(uint8(NAFResult),'./result/NoiseAwareFilter.png','png')
+end
+if(runWeightModeFilter)
+    figure;
+    imshow(WMFResult,[0 255]);axis off
+    title('Weight mode filter')
+    imwrite(uint8(WMFResult),'./result/WeightModeFilter.png','png')
 end
 if(runYangIteration)
     figure;
@@ -240,6 +273,18 @@ end
 if(runBilateralFilter)
     rmse = sqrt(sum(sum((double(BFResult(DepthSection>0)) - double(DepthSection(DepthSection>0))).^2))/sum(sum((DepthSection>0))));
     fprintf('RMSE of BF method is %.5f \n',rmse);
+end
+if(runNoiseAwareFilter)
+    rmse = sqrt(sum(sum((double(NAFResult(DepthSection>0)) - double(DepthSection(DepthSection>0))).^2))/sum(sum((DepthSection>0))));
+    fprintf('RMSE of NAF method is %.5f \n',rmse);
+end
+if(runBilateralUpsample)
+    rmse = sqrt(sum(sum((double(JBUResult(DepthSection>0)) - double(DepthSection(DepthSection>0))).^2))/sum(sum((DepthSection>0))));
+    fprintf('RMSE of BU method is %.5f \n',rmse);
+end
+if(runWeightModeFilter)
+    rmse = sqrt(sum(sum((double(WMFResult(DepthSection>0)) - double(DepthSection(DepthSection>0))).^2))/sum(sum((DepthSection>0))));
+    fprintf('RMSE of WMF method is %.5f \n',rmse);
 end
 if(runMRF)
     rmse = sqrt(sum(sum((double(MRFResult(DepthSection>0)) - double(DepthSection(DepthSection>0))).^2))/sum(sum((DepthSection>0))));
