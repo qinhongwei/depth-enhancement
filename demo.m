@@ -14,16 +14,16 @@ clc;
 
 %% Read data
 
-Depth = imread('.\data\teddy\GroundTruth.png');
+Depth = imread('.\data\Teddy\GroundTruth.png');
 % Depth = imresize(Depth,1/2,'nearest');
-Color = imread('.\data\teddy\Color.png');
+Color = imread('.\data\Teddy\Color.png');
 % Color = imresize(Color,1/2,'nearest');
 % Depth = imread('.\data\synthetic\depth3.png');
 % Color = imread('.\data\synthetic\color3.png');
 
 %% Trim data if needed
-% ColorSection = Color(451:650,751:950,:);
-% DepthSection = Depth(451:650,751:950);  % rgb2gray if needed
+% ColorSection = Color(151:250,151:360,:);
+% DepthSection = Depth(151:250,151:360);  % rgb2gray if needed
 ColorSection = Color;
 DepthSection = Depth;  % rgb2gray if needed
 % for i = 1:150
@@ -41,13 +41,13 @@ Width = size(DepthSection,2);
 %% Set Parameters
 
 % Scaling Factor
-Interval = 5;             % Down-sample factor
+Interval = 8;             % Down-sample factor
 view_3d = 1;              % View the 3D depth or not
 
 % BilateralFilter 
-BF_sigma_w = 3;	 % range sigma
+BF_sigma_w = 3;      % range sigma
 BF_sigma_c = 10;	 % spatial sigma
-BF_window = 8;	   	 % window size - radius
+BF_window = 10;	   	 % window size - radius
 BF_method = 1;		 % The method of bilateral filter  1: original bilateral filter 2: fast bilateral filter
 
 % BilateralUpsample
@@ -62,9 +62,9 @@ AD_sigma = 10;
 
 
 % MRF Parameters
-MRF_sigma = 10;       % The parameter for the gaussion kernel in the smoothness term: exp(-D^2/(2*MRF_sigma^2))
-MRF_alpha = 1;       % The balance factor between data term and smoothness term: DataEnergy+alpha*smoothnessEnergy
-MRF_method = 1;	   	 % The method to solve MRF
+MRF_sigma = 15;       % The parameter for the gaussion kernel in the smoothness term: exp(-D^2/(2*MRF_sigma^2))
+MRF_alpha = 1;        % The balance factor between data term and smoothness term: DataEnergy+alpha*smoothnessEnergy
+MRF_method = 1;	   	  % The method to solve MRF
 
 
 % MRF Parameters based on second order
@@ -98,14 +98,14 @@ StartPoint = Interval;
 SamplePoints(StartPoint:Interval:end,StartPoint:Interval:end) = 1;                 
 SampleDepth = SamplePoints.*double(DepthSection);
 LowResDepth = DepthSection(StartPoint:Interval:end,StartPoint:Interval:end);      %Sample the low resolution Depth Map
-HighResDepth = imresize(LowResDepth,Interval,'nearest');                              %Interpolating to the Normal size
+HighResDepth = double(imresize(LowResDepth,size(DepthSection)));                              %Interpolating to the Normal size
 
 
 %% Choose models
-runBilateralFilter      =   true;
+runBilateralFilter      =   false;
 runBilateralUpsample    =   false;
-runNoiseAwareFilter     =   false;
-runWeightModeFilter     =   true;
+runNoiseAwareFilter     =   true;
+runWeightModeFilter     =   false;
 runAnisotropicDiffusion = 	false;  
 runMRF        			=   false;
 runMRFSecond            =   false;

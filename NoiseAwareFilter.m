@@ -62,7 +62,7 @@ function result = NoiseAwareFilter(color,depth,factor,sigma_w,sigma_c,sigma_d,w,
             spatial = exp( -(mx.^2 + my.^2) / (2*sigma_w^2) );
             
             % Compute the blending function
-            deltaRegion = max(depth_sec(:)) - min(depth_sec(:));
+%             deltaRegion = max(depth_sec(:)) - min(depth_sec(:));
             % epsilon controls how wide the transition area (in terms of the min-max difference) 
             % tau controls at what min-max difference the blending interval shall be centered
 %             alpha = 1/(1+exp( -epsilon * (deltaRegion - tau)));
