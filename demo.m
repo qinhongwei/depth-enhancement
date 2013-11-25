@@ -57,8 +57,8 @@ BU_window = 3;
 % Noise-ware Filter
 NAU_sigma_d = 2;
 
-% AD Parameters
-AD_sigma = 10;
+% Anisotropic Diffusion Parameter
+AD_sigma = 15;
 
 
 % MRF Parameters
@@ -106,7 +106,7 @@ runBilateralFilter      =   false;
 runBilateralUpsample    =   false;
 runNoiseAwareFilter     =   false;
 runWeightModeFilter     =   false;
-runAnisotropicDiffusion = 	false;  
+runAnisotropicDiffusion = 	true;  
 runMRF        			=   false;
 runMRFSecond            =   false;
 runMRFKernelData        =   false;
@@ -132,9 +132,11 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%   Anisotropic Diffusion         
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% if(runAnisotropicDiffusion)
-%     
-% end
+if(runAnisotropicDiffusion)
+	tic
+        ADResult = AnisotropicDiffusion(ColorSection,SampleDepth,AD_sigma);
+    fprintf('$AD:Total running time is %.5f s\n',toc)
+end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%   Bilateral Upsampling       
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

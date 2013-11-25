@@ -2,7 +2,7 @@
 %Function Name: WeightedModeFilter
 %Aim: Use the weighted mode filter to upsample the depth map
 %Output: 
-%   Result      -   The output depth map after bilateral filtering
+%   Result      -   The output depth map
 %Input: 
 %   color       -   Color image
 %   depth 		-   Depth map (the same size as the color image)

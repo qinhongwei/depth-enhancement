@@ -57,9 +57,5 @@ function result = MRFUpsamplingEq(color,depth,sigma,alpha)
     fprintf('MRF_Upsampling_Eq:The running time of solving Ax=b by Backslash is %.5f s\n',BackslashTime)
     
     result = full(reshape(double(Result),height,width));
-    result(1) = result(2);
-    result(height) = result(height-1);
-    result(height*width - height + 1) = result(height*width - height + 2) ;
-    result(height*width) = result(height*width-1);
     fprintf('MRF_Upsampling_Eq:Done!\n')
 end
