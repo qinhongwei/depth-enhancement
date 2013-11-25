@@ -1,5 +1,5 @@
 function output = ColorSmoothnessTerm(color,sigma)
-%Calculate the smoothness term matrix of a 3- channel color image
+%Calculate the smoothness term matrix of MRF model for a 3-channel color image
 %Output: 
 %   output      -   the output sparse matrix
 %Input: 
@@ -7,79 +7,66 @@ function output = ColorSmoothnessTerm(color,sigma)
 %   sigma       -   Coefficient of gaussian kernel for color similarity
 %Code Author:
 %   Liu Junyi, Zhejiang University
-%   Dec. 2012
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 height = size(color,1);
 width = size(color,2);
-x=zeros(1,(width-2)*(height-2)*8);
-y=zeros(1,(width-2)*(height-2)*8);
-s=zeros(1,(width-2)*(height-2)*8);
+x=zeros(1,width * (height-1) * 2 + (width-1) * height * 2);
+y=zeros(1,width * (height-1) * 2 + (width-1) * height * 2);
+s=zeros(1,width * (height-1) * 2 + (width-1) * height * 2);
 colorUp = [color;zeros(1,width,3)]; 
 colorUp = colorUp(2:height+1,:,:);         % 整个矩阵上移动一行，最后一行用0填充
-colorDown = [zeros(1,width,3);color];
-colorDown = colorDown(1:height,:,:);       % 整个矩阵下移动一行，第一行用0填充
-colorRight = [zeros(height,1,3),color]; 
-colorRight = colorRight(:,1:width,:);      % 整个矩阵右移动一列，第一列用0填充
 colorLeft = [color,zeros(height,1,3)]; 
 colorLeft = colorLeft(:,2:width+1,:);      % 整个矩阵左移动一列，最后一列用0填充
 CompareColor{1}=colorUp;
-CompareColor{2}=colorDown;
-CompareColor{3}=colorRight;
-CompareColor{4}=colorLeft;
+CompareColor{2}=colorLeft;
 
 % 不对边缘的像素进行操作
-rowRange = 2:height-1;
-colRange = 2:width-1;
+rowRange{1} = 1:height-1;       %  上下连接关系的条数为 width * (height-1)
+colRange{1} = 1:width;
+rowRange{2} = 1:height;         %  左右连接关系的条数为 (width-1) * height
+colRange{2} = 1:width-1;
+indexRange{1} = 1 : width * (height-1);
+indexRange{2} = width * (height-1) + 1 : width * (height-1) + (width-1) * height;
+nodeNumber{1} = width * (height-1);
+nodeNumber{2} = (width-1) * height;
+offset{1} = 1;                  %  上下连接关系的行列偏移为1
+offset{2} = height;             %  左右连接关系的行列偏移为height
+
 [mu,mv] = meshgrid(1:height, 1:width);
 mu = mu';
 mv = mv';
-for i=1:4 % 针对四幅相减图像进行操作
+indexPtr = 0;
+for i=1:2 % 针对四幅相减图像进行操作
     % 针对指定图像对进行像素Smoothness项的计算
-    Temp1 = color(rowRange,colRange,:) - CompareColor{i}(rowRange,colRange,:);
+    Temp1 = color(rowRange{i},colRange{i},:) - CompareColor{i}(rowRange{i},colRange{i},:);
     Temp2 = Temp1(:,:,1).^2+Temp1(:,:,2).^2+Temp1(:,:,3).^2;
     Temp3 = sqrt(exp(-1/(2*sigma^2)*Temp2));
-    % 第一部分:原图
-    indexRange = 2*length(rowRange)*length(colRange)*(i-1)+1:2*length(rowRange)*length(colRange)*(i-1)+length(rowRange)*length(colRange);
-    xTemp = length(rowRange)*length(colRange)*(i-1)+1:length(rowRange)*length(colRange)*i;
-    xTemp = xTemp';
-    x(indexRange) = xTemp;
     
-    muTemp = mu(rowRange,colRange);
-    mvTemp = mv(rowRange,colRange);
-    pu = reshape(muTemp,length(rowRange)*length(colRange),1);
-    pv = reshape(mvTemp,length(rowRange)*length(colRange),1);
+    % 第一部分:原图
+    indexRangePart = indexPtr + 1:indexPtr + nodeNumber{i};
+    indexPtr = indexRangePart(end);
+    xTemp = indexRange{i};
+    x(indexRangePart) = xTemp;
+    
+    muTemp = mu(rowRange{i},colRange{i});
+    mvTemp = mv(rowRange{i},colRange{i});
+    pu = reshape(muTemp,length(rowRange{i})*length(colRange{i}),1);
+    pv = reshape(mvTemp,length(rowRange{i})*length(colRange{i}),1);
     yTemp = pu + (pv - 1) * height;
-    y(indexRange) = yTemp;
+    y(indexRangePart) = yTemp;
 
     sTemp = reshape(Temp3,numel(Temp3),1);
-    s(indexRange) = sTemp;
+    s(indexRangePart) = sTemp;
 
     % 第二部分:比较图
-    indexRange = 2*length(rowRange)*length(colRange)*(i-1)+length(rowRange)*length(colRange)+1:2*length(rowRange)*length(colRange)*i;
-    xTemp = length(rowRange)*length(colRange)*(i-1)+1:length(rowRange)*length(colRange)*i;
-    xTemp = xTemp';
-    x(indexRange) = xTemp;
+    indexRangePart = indexPtr + 1:indexPtr + nodeNumber{i};
+    indexPtr = indexRangePart(end);
+    
+    x(indexRangePart) = xTemp;
 
-    if (i==1)
-        muTemp = mu(rowRange+1,colRange);
-        mvTemp = mv(rowRange+1,colRange);
-    elseif (i==2)
-        muTemp = mu(rowRange-1,colRange);
-        mvTemp = mv(rowRange-1,colRange);
-    elseif (i==3)
-        muTemp = mu(rowRange,colRange-1);
-        mvTemp = mv(rowRange,colRange-1);
-    elseif (i==4)
-        muTemp = mu(rowRange,colRange+1);
-        mvTemp = mv(rowRange,colRange+1);
-    end
-    pu = reshape(muTemp,length(rowRange)*length(colRange),1);
-    pv = reshape(mvTemp,length(rowRange)*length(colRange),1);
-    yTemp = pu + (pv - 1) * height;
-    y(indexRange) = yTemp;
+    y(indexRangePart) = yTemp + offset{i};
 
-    sTemp = -reshape(Temp3,numel(Temp3),1);
-    s(indexRange) = sTemp;
+    s(indexRangePart) = -sTemp;
 end
-output=sparse(x,y,s,(width-2)*(height-2)*4,height*width);
+output=sparse(x,y,s,indexRange{2}(end),height*width);
 

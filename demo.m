@@ -22,10 +22,10 @@ Color = imread('.\data\Teddy\Color.png');
 % Color = imread('.\data\synthetic\color3.png');
 
 %% Trim data if needed
-% ColorSection = Color(151:250,151:360,:);
-% DepthSection = Depth(151:250,151:360);  % rgb2gray if needed
-ColorSection = Color;
-DepthSection = Depth;  % rgb2gray if needed
+ColorSection = Color(151:250,151:260,:);
+DepthSection = Depth(151:250,151:260);  % rgb2gray if needed
+% ColorSection = Color;
+% DepthSection = Depth;  % rgb2gray if needed
 % for i = 1:150
 %     DepthSection(i,:) = i;
 % end
@@ -41,8 +41,8 @@ Width = size(DepthSection,2);
 %% Set Parameters
 
 % Scaling Factor
-Interval = 8;             % Down-sample factor
-view_3d = 1;              % View the 3D depth or not
+Interval = 5;             % Down-sample factor
+view_3d = 0;              % View the 3D depth or not
 
 % BilateralFilter 
 BF_sigma_w = 3;      % range sigma
@@ -51,9 +51,9 @@ BF_window = 10;	   	 % window size - radius
 BF_method = 1;		 % The method of bilateral filter  1: original bilateral filter 2: fast bilateral filter
 
 % BilateralUpsample
-BU_sigma_w = 0.5;
+BU_sigma_w = 0.2;
 BU_sigma_c = 10;
-BU_window = 2;
+BU_window = 3;
 % Noise-ware Filter
 NAU_sigma_d = 2;
 
@@ -73,7 +73,7 @@ MRF_second_lambda1 = 0.1;       % The balance factor between data term and first
 MRF_second_lambda2 = 1;       % The balance factor between data term and second order smoothness term: 
 
 % MRF Parameters based on second order
-MRF_kernelData_smoothSigma = 10;       % The parameter for the gaussion kernel in the smoothness term: exp(-D^2/(2*MRF_sigma^2))
+MRF_kernelData_smoothSigma = 15;       % The parameter for the gaussion kernel in the smoothness term: exp(-D^2/(2*MRF_sigma^2))
 MRF_kernelData_dataSigma = 1;
 MRF_kernelData_dataWindow = 3;
 MRF_kernelData_alpha = 1;    % The balance factor between data term and smoothness term: DataEnergy+alpha*smoothnessEnergy
@@ -83,7 +83,7 @@ MRF_kernelData_alpha = 1;    % The balance factor between data term and smoothne
 MRF_Tensor_lamda = 1;         % The balance factor between IxIy and RGB in tensor: [Ix Iy lamda*R lamda*G lamda*B]'
 MRF_Tensor_sigma = 0.2;       % The parameter for the gaussion kernel in the smoothness term: exp(-D^2/(2*LSLSTensor_sigma^2))
 MRF_Tensor_alpha = 1;         % The balance factor between data term and smoothness term: DataEnergy+alpha*smoothnessEnergy
-MRF_Tensor_method = 1;		% The method to solve MRF
+MRF_Tensor_method = 1;		  % The method to solve MRF
 
 % %YangIteration  
 % YI_sigma_w = 3;
@@ -94,17 +94,17 @@ MRF_Tensor_method = 1;		% The method to solve MRF
 
 %% Generate the depth map in low resolution
 SamplePoints = zeros(Height,Width);
-StartPoint = Interval;
+StartPoint = Interval; % It should be set to 'Interval' for the Joint Bilateral Upsample model to work
 SamplePoints(StartPoint:Interval:end,StartPoint:Interval:end) = 1;                 
 SampleDepth = SamplePoints.*double(DepthSection);
 LowResDepth = DepthSection(StartPoint:Interval:end,StartPoint:Interval:end);      %Sample the low resolution Depth Map
-HighResDepth = double(imresize(LowResDepth,size(DepthSection)));                              %Interpolating to the Normal size
+HighResDepth = double(imresize(LowResDepth,size(DepthSection)));                  %Interpolating to the Normal size
 
 
 %% Choose models
 runBilateralFilter      =   false;
 runBilateralUpsample    =   false;
-runNoiseAwareFilter     =   true;
+runNoiseAwareFilter     =   false;
 runWeightModeFilter     =   false;
 runAnisotropicDiffusion = 	false;  
 runMRF        			=   false;
@@ -120,7 +120,8 @@ runYangIteration		=   false;
 if(runBilateralFilter)
 	tic
     if(BF_method == 1)
-		BFResult = BilateralFilter(ColorSection,SampleDepth,BF_sigma_w,BF_sigma_c,BF_window);
+		BFResult = BilateralFilter(ColorSection,SampleDepth,...
+                                        BF_sigma_w,BF_sigma_c,BF_window);
 	elseif(BF_method == 2)
 		BFResult = FastBilateralFilter(SampleDepth,double(rgb2gray(ColorSection)),...
                                         0,255,BF_sigma_w,BF_sigma_c);
@@ -137,6 +138,7 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%   Bilateral Upsampling       
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% In this model, the start point of sampling must be the 'Interval'
 if(runBilateralUpsample)
 	tic
     JBUResult = JointBilateralUpsample(ColorSection,LowResDepth,Interval,BU_sigma_w,BU_sigma_c,BU_window);
