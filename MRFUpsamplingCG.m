@@ -29,10 +29,8 @@ function result = MRFUpsamplingCG(color,depth,sigma,alpha)
     
     bicubicDepth = imresize(smallDepth,[height,width]);
     initialDepth = reshape(bicubicDepth,pixelNumber,1);
-%     smoothMatrix = ColorSmoothnessN_N(color,sigma);
     list = ColorSmoothnessList(color,sigma);
-%     load('list.mat');
-    [cost, grad] = MRfCostFunction(initialDepth, depth, list, alpha);
+    [cost, grad] = MRFCostFunction(initialDepth, depth, list, alpha);
     
 %     % Now we can use it to check your cost function and derivative calculations
 %     % for the sparse autoencoder.  
@@ -50,8 +48,8 @@ function result = MRFUpsamplingCG(color,depth,sigma,alpha)
     %  Run fminunc to obtain the optimal theta
     %  This function will return theta and the cost 
     [result, cost] = ...
-        fminunc(@(x)(MRfCostFunction(x, depth, list, alpha)),initialDepth, options);
+        fminunc(@(x)(MRFCostFunction(x, depth, list, alpha)),initialDepth, options);
     
-    fprintf('Cost at theta found by fminunc: %f\n', cost);
+    fprintf('    Cost at theta found by fminunc: %f\n', cost);
     
     result = reshape(result, height, width); 

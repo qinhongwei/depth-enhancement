@@ -41,7 +41,7 @@ function result = MRFUpsamplingEqO2(color,depth,sigma,lambda1,lambda2)
 %     save(savefile,'S','S2');
     R = ColorSecondSmoothnessTerm(color,sigma);
     SmoothnessTime = toc;
-    fprintf('MRF_Upsampling_EqO2:The running time of generating the pairwise matrix is %.5f s\n',SmoothnessTime)
+    fprintf('    The running time of generating the pairwise matrix is %.5f s\n',SmoothnessTime)
       
    
     %Compute the A and b
@@ -52,18 +52,18 @@ function result = MRFUpsamplingEqO2(color,depth,sigma,lambda1,lambda2)
     A = lambda1 * A1 + A2 + lambda2*A3;
     b = W'*W*Z;
     MatrixGenerateTime = toc;
-    fprintf('MRF_Upsampling_EqO2:The running time of getting A and b is %.5f s\n',MatrixGenerateTime)
+    fprintf('    The running time of getting A and b is %.5f s\n',MatrixGenerateTime)
     
     %Using Backslash to solve the Ax=b
     tic;
     Result = A\b;
     BackslashTime = toc;
-    fprintf('MRF_Upsampling_EqO2:The running time of solving Ax=b by Backslash is %.5f s\n',BackslashTime)
+    fprintf('    The running time of solving Ax=b by Backslash is %.5f s\n',BackslashTime)
     
     result = full(reshape(double(Result),height,width));
     result(1) = result(2);
     result(height) = result(height-1);
     result(height*width - height + 1) = result(height*width - height + 2) ;
     result(height*width) = result(height*width-1);
-    fprintf('MRF_Upsampling_EqO2:Done!\n')
+    fprintf('    Done!\n')
 end

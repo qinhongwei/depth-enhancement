@@ -22,8 +22,8 @@ Color = imread('.\data\Teddy\Color.png');
 % Color = imread('.\data\synthetic\color3.png');
 
 %% Trim data if needed
-ColorSection = Color(151:250,151:260,:);
-DepthSection = Depth(151:250,151:260);  % rgb2gray if needed
+ColorSection = Color(151:250,231:260,:);
+DepthSection = Depth(151:250,231:260);  % rgb2gray if needed
 % ColorSection = Color;
 % DepthSection = Depth;  % rgb2gray if needed
 % for i = 1:150
@@ -64,7 +64,7 @@ AD_sigma = 15;
 % MRF Parameters
 MRF_sigma = 15;       % The parameter for the gaussion kernel in the smoothness term: exp(-D^2/(2*MRF_sigma^2))
 MRF_alpha = 1;        % The balance factor between data term and smoothness term: DataEnergy+alpha*smoothnessEnergy
-MRF_method = 1;	   	  % The method to solve MRF
+MRF_method = 3;	   	  % The method to solve MRF
 
 
 % MRF Parameters based on second order
@@ -80,19 +80,19 @@ MRF_kernelData_alpha = 1;    % The balance factor between data term and smoothne
 
 
 % MRF Parameters based on Tensor
-MRF_Tensor_lamda = 1;         % The balance factor between IxIy and RGB in tensor: [Ix Iy lamda*R lamda*G lamda*B]'
-MRF_Tensor_sigma = 0.2;       % The parameter for the gaussion kernel in the smoothness term: exp(-D^2/(2*LSLSTensor_sigma^2))
-MRF_Tensor_alpha = 1;         % The balance factor between data term and smoothness term: DataEnergy+alpha*smoothnessEnergy
-MRF_Tensor_method = 1;		  % The method to solve MRF
+MRF_tensor_lamda = 1;         % The balance factor between IxIy and RGB in tensor: [Ix Iy lamda*R lamda*G lamda*B]'
+MRF_tensor_sigma = 0.2;       % The parameter for the gaussion kernel in the smoothness term: exp(-D^2/(2*LSLSTensor_sigma^2))
+MRF_tensor_alpha = 1;         % The balance factor between data term and smoothness term: DataEnergy+alpha*smoothnessEnergy
+MRF_tensor_method = 1;		  % The method to solve MRF
 
-% %YangIteration  
-% YI_sigma_w = 3;
-% YI_sigma_c = 10;
-% YI_window = 5;
-% YIDepthInteval = 20;          % Depth slice interal
-% YIIterativeTime = 3;
+% Layered Bilateral Filter
+LBF_sigma_w = 3;
+LBF_sigma_c = 10;
+LBF_window = 10;
+LBF_depth_inteval = 50;          % Depth slice interal
+LBF_iterative_number = 3;
 
-%% Generate the depth map in low resolution
+%% Generate the kinds of depth map
 SamplePoints = zeros(Height,Width);
 StartPoint = Interval; % It should be set to 'Interval' for the Joint Bilateral Upsample model to work
 SamplePoints(StartPoint:Interval:end,StartPoint:Interval:end) = 1;                 
@@ -100,211 +100,12 @@ SampleDepth = SamplePoints.*double(DepthSection);
 LowResDepth = DepthSection(StartPoint:Interval:end,StartPoint:Interval:end);      %Sample the low resolution Depth Map
 HighResDepth = double(imresize(LowResDepth,size(DepthSection)));                  %Interpolating to the Normal size
 
-
-%% Choose models
-runBilateralFilter      =   false;
-runBilateralUpsample    =   false;
-runNoiseAwareFilter     =   false;
-runWeightModeFilter     =   false;
-runAnisotropicDiffusion = 	true;  
-runMRF        			=   false;
-runMRFSecond            =   false;
-runMRFKernelData        =   false;
-runMRFTensor	        =   false;
-runYangIteration		=   false;
-
-%% Let us begin!
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%   Bilateral Filter                
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-if(runBilateralFilter)
-	tic
-    if(BF_method == 1)
-		BFResult = BilateralFilter(ColorSection,SampleDepth,...
-                                        BF_sigma_w,BF_sigma_c,BF_window);
-	elseif(BF_method == 2)
-		BFResult = FastBilateralFilter(SampleDepth,double(rgb2gray(ColorSection)),...
-                                        0,255,BF_sigma_w,BF_sigma_c);
-	end
-	fprintf('$BF:Total running time is %.5f s\n',toc)
-end
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%   Anisotropic Diffusion         
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-if(runAnisotropicDiffusion)
-	tic
-        ADResult = AnisotropicDiffusion(ColorSection,SampleDepth,AD_sigma);
-    fprintf('$AD:Total running time is %.5f s\n',toc)
-end
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%   Bilateral Upsampling       
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% In this model, the start point of sampling must be the 'Interval'
-if(runBilateralUpsample)
-	tic
-    JBUResult = JointBilateralUpsample(ColorSection,LowResDepth,Interval,BU_sigma_w,BU_sigma_c,BU_window);
-	fprintf('$BU:Total running time is %.5f s\n',toc)
-end
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%   Noise-aware Filter     
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-if(runNoiseAwareFilter)
-	tic
-    NAFResult = NoiseAwareFilter(ColorSection,LowResDepth,Interval,BU_sigma_w,BU_sigma_c,NAU_sigma_d,BU_window);
-	fprintf('$NAF:Total running time is %.5f s\n',toc)
-end
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%   Weight Mode Filter 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-if(runWeightModeFilter)
-	tic
-    WMFResult = WeightedModeFilter(ColorSection,SampleDepth,BF_sigma_w,BF_sigma_c,BF_window);
-	fprintf('$WMF:Total running time is %.5f s\n',toc)
-end
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% Original MRF
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-if(runMRF)
-    if(MRF_method == 1)
-        MRFResult = MRFUpsamplingEq(ColorSection,SampleDepth,MRF_sigma,MRF_alpha);
-    elseif (MRF_method == 2)
-        MRFResult = MRFUpsamplingCG(ColorSection,SampleDepth,MRF_sigma,MRF_alpha);
-    elseif (MRF_method == 3)
-        MRFResult = MRFUpsamplingGC(ColorSection,SampleDepth,MRF_sigma,MRF_alpha);
-    end
-end
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%       Yang's Iterative Depth Refinement           %%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% if(runYangIteration)
-%     YIResult=YangIteration(ColorSection,NLRDepth,Height,Width,YI_sigma_w,YI_sigma_c,YI_window,YIDepthInteval,YIIterativeTime);
-% end
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% Second Order MRF
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-if(runMRFSecond)
-    MRFSecondResult = MRFUpsamplingEqO2(ColorSection,SampleDepth,MRF_second_sigma,MRF_second_lambda1,MRF_second_lambda2);
-end
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% Kernel Data Term MRF
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-if(runMRFKernelData)
-    MRFKernelResult = MRFUpsamplingEqKernelData(ColorSection,SampleDepth,MRF_kernelData_smoothSigma,MRF_kernelData_alpha,MRF_kernelData_dataSigma,MRF_kernelData_dataWindow);
-end
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% MRF + Tensor; Solve a Large Sparse Linear System  %%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% if(runLSLSTensor)
-%     %T is the data structure to store the tensors
-%     T=Tensor(ColorSection,LSLSTensor_lamda,Height,Width);  % Tip: the correction diag matrix in the tensor has effects on the result
-%     LSLSTensorResult=LSLSTensor(T,SampleDepth,SamplePoints,Height,Width,LSLSTensor_sigma,LSLSTensor_alpha);  
-% end
-
-
-%% It's the time to see the results
+%% Show the ground truth and input data
 figure;
 subplot(2,2,1);imshow(uint8(ColorSection));title('Color Image');axis off
 subplot(2,2,2);imshow(DepthSection,[0 255]);title('Ground Truth');axis off
 subplot(2,2,3);imshow(SampleDepth,[0 255]);title('Downsampled Depth Map');axis off
-subplot(2,2,4);imshow(HighResDepth,[0 255]);title('Depth Map by interpolation');axis off
-if(runAnisotropicDiffusion)
-    figure;
-    imshow(uint8(reshape(full(AP_GCPResult),Height,Width)),[0 255]);axis off
-    title('Adaptive Propagation from GCPs')
-    imwrite(uint8(reshape(full(AP_GCPResult),Height,Width)),'AP_GCP.png','png')
-end
-if(runBilateralFilter)
-    figure;
-    imshow(BFResult,[0 255]);axis off
-    title('Bilateral Filter')
-    imwrite(uint8(BFResult),'./result/BilateralFilter.png','png')
-end
-if(runBilateralUpsample)
-    figure;
-    imshow(JBUResult,[0 255]);axis off
-    title('Joint Bilateral Upsample')
-    imwrite(uint8(JBUResult),'./result/JointBilateralFilter.png','png')
-end
-if(runNoiseAwareFilter)
-    figure;
-    imshow(NAFResult,[0 255]);axis off
-    title('Noise aware filter')
-    imwrite(uint8(NAFResult),'./result/NoiseAwareFilter.png','png')
-end
-if(runWeightModeFilter)
-    figure;
-    imshow(WMFResult,[0 255]);axis off
-    title('Weight mode filter')
-    imwrite(uint8(WMFResult),'./result/WeightModeFilter.png','png')
-end
-if(runYangIteration)
-    figure;
-    imshow(YIResult,[0 255]);axis off;
-    title('Yang Iterative Depth Refinement')
-    imwrite(uint8(YIResult),'YangIteration.png','png')
-end
-if(runMRF)
-    figure;
-    imshow(uint8(MRFResult),[0 255]);axis off
-    title('Original MRF')
-    imwrite(uint8(MRFResult),'./result/MRFUpsample.png','png')
-end
-if(runMRFSecond)
-    figure;
-    imshow(uint8(MRFSecondResult),[0 255]);axis off
-    title('Second Order MRF ')
-%    imwrite(uint8(MRFResult),'./result/MRFUpsample.png','png')
-end
-if(runMRFKernelData)
-    figure;
-    imshow(uint8(MRFKernelResult),[0 255]);axis off
-    title('Kernel Data Term MRF ')
-%     imwrite(uint8(MRFResult),'./result/MRFUpsample.png','png')
-end
-
-if(runMRFTensor)
-    figure;
-    imshow(uint8(reshape(full(LSLSTensorResult),Height,Width)));axis off
-    title('MRF + Tensor')
-    imwrite(uint8(reshape(full(LSLSTensorResult),Height,Width)),'LSLSTensor.png','png')
-end
-
-%% Quantative evaluation
-if(runBilateralFilter)
-    rmse = sqrt(sum(sum((double(BFResult(DepthSection>0)) - double(DepthSection(DepthSection>0))).^2))/sum(sum((DepthSection>0))));
-    fprintf('RMSE of BF method is %.5f \n',rmse);
-end
-if(runNoiseAwareFilter)
-    rmse = sqrt(sum(sum((double(NAFResult(DepthSection>0)) - double(DepthSection(DepthSection>0))).^2))/sum(sum((DepthSection>0))));
-    fprintf('RMSE of NAF method is %.5f \n',rmse);
-end
-if(runBilateralUpsample)
-    rmse = sqrt(sum(sum((double(JBUResult(DepthSection>0)) - double(DepthSection(DepthSection>0))).^2))/sum(sum((DepthSection>0))));
-    fprintf('RMSE of BU method is %.5f \n',rmse);
-end
-if(runWeightModeFilter)
-    rmse = sqrt(sum(sum((double(WMFResult(DepthSection>0)) - double(DepthSection(DepthSection>0))).^2))/sum(sum((DepthSection>0))));
-    fprintf('RMSE of WMF method is %.5f \n',rmse);
-end
-if(runMRF)
-    rmse = sqrt(sum(sum((double(MRFResult(DepthSection>0)) - double(DepthSection(DepthSection>0))).^2))/sum(sum((DepthSection>0))));
-    fprintf('RMSE of MRF method is %.5f \n',rmse);
-end
-if(runMRFSecond)
-    rmse = sqrt(sum(sum((double(MRFSecondResult(DepthSection>0)) - double(DepthSection(DepthSection>0))).^2))/sum(sum((DepthSection>0))));
-    fprintf('RMSE of MRF second order method is %.5f \n',rmse);
-end
-if(runMRFKernelData)
-    rmse = sqrt(sum(sum((double(MRFKernelResult(DepthSection>0)) - double(DepthSection(DepthSection>0))).^2))/sum(sum((DepthSection>0))));
-    fprintf('RMSE of MRF kernel data method is %.5f \n',rmse);
-end
-
-
-%% synthetic surf show
+subplot(2,2,4);imshow(HighResDepth,[0 255]);title('Upsampled Depth Map(Interpolation)');axis off
 if(view_3d)
     [mu,mv] = meshgrid(1:Width,1:Height);
     figure;
@@ -312,25 +113,154 @@ if(view_3d)
     title('GroundTruth','Color',[1,1,1]);
     view(30,30);
     light('Posi',[1,0,1]);shading interp;axis off;set(gcf,'color',[0 0 0]);
-    if(runBilateralFilter)
-        figure;
-        surf(mu,mv,BFResult);
-        title('BF method','Color',[1,1,1]);
-        view(30,30);
-        light('Posi',[1,0,1]);shading interp;axis off;set(gcf,'color',[0 0 0]);
-    end
-    if(runMRF)
-        figure;
-        surf(mu,mv,MRFResult,'EdgeColor','flat');
-        title('MRF method','Color',[1,1,1]);
-        view(30,30);
-        light('Posi',[1,0,1]);shading interp;axis off;set(gcf,'color',[0 0 0]);
-    end
-    if(runMRFSecond)
-        figure;
-        surf(mu,mv,MRFSecondResult);
-        title('MRF second method','Color',[1,1,1]);
-        view(30,30);
-        light('Posi',[1,0,1]);shading interp;axis off;set(gcf,'color',[0 0 0]);
-    end
 end
+%% Choose models
+s = [struct('string','Bilateral Filter','run',true)
+     struct('string','Bilateral Upsampling','run',false)
+     struct('string','Noise-aware Filter','run',false)
+     struct('string','Weight Mode Filter','run',false)
+     struct('string','Anisotropic Diffusion','run',false)
+     struct('string','Original Markov Random Field','run',false)
+     struct('string','Markov Random Field(Second Order Smoothness)','run',false)
+     struct('string','Markov Random Field(Kernel Data Term)','run',false)
+     struct('string','Markov Random Field(Tensor)','run',false)
+     struct('string','Layered Bilateral Filter','run',true)
+    ];
+
+%% Let us begin!
+for i = 1:length(s)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%   Bilateral Filter                
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+if(isequal(s(i).string,'Bilateral Filter') && s(i).run)
+	fprintf([s(i).string ' begin...\n'])
+    tic
+    if(BF_method == 1)
+		Result = BilateralFilter(ColorSection,SampleDepth,...
+                                        BF_sigma_w,BF_sigma_c,BF_window);
+	elseif(BF_method == 2)
+		Result = FastBilateralFilter(SampleDepth,double(rgb2gray(ColorSection)),...
+                                        0,255,BF_sigma_w,BF_sigma_c);
+	end
+	fprintf([s(i).string ': total running time is %.5f s\n'],toc)
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%   Bilateral Upsampling       
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% In this model, the start point of sampling must be the 'Interval'
+if(isequal(s(i).string,'Bilateral Upsampling') && s(i).run)
+	fprintf([s(i).string ' begin...\n'])
+    tic
+    Result = JointBilateralUpsample(ColorSection,LowResDepth,Interval,BU_sigma_w,BU_sigma_c,BU_window);
+	fprintf([s(i).string ': total running time is %.5f s\n'],toc)
+end
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%   Anisotropic Diffusion         
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+if(isequal(s(i).string,'Anisotropic Diffusion') && s(i).run)
+	fprintf([s(i).string ' begin...\n'])
+    tic
+    Result = AnisotropicDiffusion(ColorSection,SampleDepth,AD_sigma);
+    fprintf([s(i).string ': total running time is %.5f s\n'],toc)
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%   Noise-aware Filter     
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+if(isequal(s(i).string,'Noise-aware Filter') && s(i).run)
+	fprintf([s(i).string ' begin...\n'])
+    tic
+    Result = NoiseAwareFilter(ColorSection,LowResDepth,Interval,BU_sigma_w,BU_sigma_c,NAU_sigma_d,BU_window);
+	fprintf([s(i).string ': total running time is %.5f s\n'],toc)
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%   Weight Mode Filter 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+if(isequal(s(i).string,'Weight Mode Filter') && s(i).run)
+	fprintf([s(i).string ' begin...\n'])
+    tic
+    Result = WeightedModeFilter(ColorSection,SampleDepth,BF_sigma_w,BF_sigma_c,BF_window);
+	fprintf([s(i).string ': total running time is %.5f s\n'],toc)
+end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Original MRF
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+if(isequal(s(i).string,'Original Markov Random Field') && s(i).run)
+    fprintf([s(i).string ' begin...\n'])
+    tic
+    if(MRF_method == 1)
+        Result = MRFUpsamplingEq(ColorSection,SampleDepth,MRF_sigma,MRF_alpha);
+    elseif (MRF_method == 2)
+        Result = MRFUpsamplingCG(ColorSection,SampleDepth,MRF_sigma,MRF_alpha);
+    elseif (MRF_method == 3)
+        Result = MRFUpsamplingGC(ColorSection,SampleDepth,MRF_sigma,MRF_alpha);
+    end
+    fprintf([s(i).string ': total running time is %.5f s\n'],toc)
+end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%       Yang's Iterative Depth Refinement           
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+if(isequal(s(i).string,'Layered Bilateral Filter') && s(i).run)
+    fprintf([s(i).string ' begin...\n'])
+    tic
+    Result = LayeredBilateralFilter(ColorSection,HighResDepth,LBF_sigma_w,LBF_sigma_c,LBF_window,LBF_depth_inteval,LBF_iterative_number);
+    fprintf([s(i).string ': total running time is %.5f s\n'],toc)
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Second Order MRF
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+if(isequal(s(i).string,'Markov Random Field(Second Order Smoothness)') && s(i).run)
+    fprintf([s(i).string ' begin...\n'])
+    tic
+    Result = MRFUpsamplingEqO2(ColorSection,SampleDepth,MRF_second_sigma,MRF_second_lambda1,MRF_second_lambda2);
+    fprintf([s(i).string ': total running time is %.5f s\n'],toc)
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Kernel Data Term MRF
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+if(isequal(s(i).string,'Markov Random Field(Kernel Data Term)') && s(i).run)
+    fprintf([s(i).string ' begin...\n'])
+    tic
+    Result = MRFUpsamplingEqKernelData(ColorSection,SampleDepth,MRF_kernelData_smoothSigma,MRF_kernelData_alpha,MRF_kernelData_dataSigma,MRF_kernelData_dataWindow);
+    fprintf([s(i).string ': total running time is %.5f s\n'],toc)
+end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% MRF + Tensor; Solve a Large Sparse Linear System  
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% if(isequal(s(i).string,'Markov Random Field(Tensor)') && s(i).run)
+%     fprintf([s(i).string ' begin...\n'])
+%     tic
+%     %T is the data structure to store the tensors
+%     T=Tensor(ColorSection,LSLSTensor_lamda,Height,Width);  % Tip: the correction diag matrix in the tensor has effects on the result
+%     Result=LSLSTensor(T,SampleDepth,SamplePoints,Height,Width,LSLSTensor_sigma,LSLSTensor_alpha);
+%     fprintf([s(i).string ': total running time is %.5f s\n'],toc)
+% end
+
+%% Show results
+if(s(i).run)
+figure;
+imshow(uint8(Result),[0 255]);axis off
+title(s(i).string)
+imwrite(uint8(Result),['./result/' s(i).string '.png'],'png')
+end
+%% Quantative evaluation
+if(s(i).run)
+rmse = sqrt(sum(sum((double(Result(DepthSection>0)) - double(DepthSection(DepthSection>0))).^2))/sum(sum((DepthSection>0))));
+fprintf(['°ÔRMSE of <' s(i).string '> is %.5f °Ô\n'],rmse);
+end
+%% synthetic surf show
+if(view_3d && s(i).run)
+    figure;
+    surf(mu,mv,Result);
+    title(s(i).string,'Color',[1,1,1]);
+    view(30,30);
+    light('Posi',[1,0,1]);shading interp;axis off;set(gcf,'color',[0 0 0]);
+end
+end
+

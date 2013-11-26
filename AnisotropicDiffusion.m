@@ -25,12 +25,10 @@ function result = AnisotropicDiffusion(color,depth,sigma_w)
     color = double(color);
     S = ADMatrix(color,depth,sigma_w);
     
-    fprintf('AD:The running time of getting A and b is %.5f s\n',toc);
+    fprintf('    The running time of getting A and b is %.5f s\n',toc);
     Result = S\Z;
     BackslashTime=toc;
-    fprintf('AD:The running time of solving Ax=b by Backslash is %.5f s\n',BackslashTime)
-    
-    
+    fprintf('    The running time of solving Ax=b by Backslash is %.5f s\n',BackslashTime)
     
     result = full(reshape(double(Result),height,width));
-    fprintf('AD:Done!\n')
+    fprintf('    Done!\n')

@@ -1,4 +1,4 @@
-function [J, grad] = MRfCostFunction(depth, measuredDepth, colorList, alpha)
+function [J, grad] = MRFCostFunction(depth, measuredDepth, colorList, alpha)
 %Compute cost and gradient for MRF upsample
 %Output: 
 %   J               -   Cost

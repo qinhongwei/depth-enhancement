@@ -38,8 +38,9 @@ function result = MRFUpsamplingGC(color,depth,sigma,alpha)
         end
     end
     tic;
+    addpath('.\GCMex');
     [result E Eafter] = GCMex(initialDepth, single(unary), pairwise, single(labelcost),1);
     time = toc;
-    fprintf('MRFUpsampleGC: The running time is %.5f s', time);
+    fprintf('    The running time of solving Graphcut is %.5f s', time);
     result = reshape(result,height,width);
     result = result * 1;
