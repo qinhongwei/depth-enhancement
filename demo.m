@@ -83,7 +83,6 @@ MRF_kernelData_alpha = 1;    % The balance factor between data term and smoothne
 MRF_tensor_lamda = 1;         % The balance factor between IxIy and RGB in tensor: [Ix Iy lamda*R lamda*G lamda*B]'
 MRF_tensor_sigma = 0.2;       % The parameter for the gaussion kernel in the smoothness term: exp(-D^2/(2*LSLSTensor_sigma^2))
 MRF_tensor_alpha = 1;         % The balance factor between data term and smoothness term: DataEnergy+alpha*smoothnessEnergy
-MRF_tensor_method = 1;		  % The method to solve MRF
 
 % Layered Bilateral Filter
 LBF_sigma_w = 3;
@@ -115,7 +114,7 @@ if(view_3d)
     light('Posi',[1,0,1]);shading interp;axis off;set(gcf,'color',[0 0 0]);
 end
 %% Choose models
-s = [struct('string','Bilateral Filter','run',true)
+s = [struct('string','Bilateral Filter','run',false)
      struct('string','Bilateral Upsampling','run',false)
      struct('string','Noise-aware Filter','run',false)
      struct('string','Weight Mode Filter','run',false)
@@ -123,8 +122,8 @@ s = [struct('string','Bilateral Filter','run',true)
      struct('string','Original Markov Random Field','run',false)
      struct('string','Markov Random Field(Second Order Smoothness)','run',false)
      struct('string','Markov Random Field(Kernel Data Term)','run',false)
-     struct('string','Markov Random Field(Tensor)','run',false)
-     struct('string','Layered Bilateral Filter','run',true)
+     struct('string','Markov Random Field(Tensor)','run',true)
+     struct('string','Layered Bilateral Filter','run',false)
     ];
 
 %% Let us begin!
@@ -233,14 +232,13 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% MRF + Tensor; Solve a Large Sparse Linear System  
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% if(isequal(s(i).string,'Markov Random Field(Tensor)') && s(i).run)
-%     fprintf([s(i).string ' begin...\n'])
-%     tic
-%     %T is the data structure to store the tensors
-%     T=Tensor(ColorSection,LSLSTensor_lamda,Height,Width);  % Tip: the correction diag matrix in the tensor has effects on the result
-%     Result=LSLSTensor(T,SampleDepth,SamplePoints,Height,Width,LSLSTensor_sigma,LSLSTensor_alpha);
-%     fprintf([s(i).string ': total running time is %.5f s\n'],toc)
-% end
+if(isequal(s(i).string,'Markov Random Field(Tensor)') && s(i).run)
+    fprintf([s(i).string ' begin...\n'])
+    tic
+    T = Tensor(ColorSection,MRF_tensor_lamda);  % Tip: the correction diag matrix in the tensor has effects on the result
+    Result = MRFUpsamplingTensor(T,SampleDepth,MRF_tensor_sigma,MRF_tensor_alpha);
+    fprintf([s(i).string ': total running time is %.5f s\n'],toc)
+end
 
 %% Show results
 if(s(i).run)
