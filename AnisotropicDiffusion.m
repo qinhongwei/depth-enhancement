@@ -7,12 +7,16 @@
 %   color       -   Color image
 %   depth 		-   Sparse depth map 
 %   sigma_w     -   Coefficient of gaussian kernel for spatial
+%   data_weight -   weight of the measurements
 %Code Author:
 %   Liu Junyi, Zhejiang University
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function result = AnisotropicDiffusion(color,depth,sigma_w)
+function result = AnisotropicDiffusion(color,depth,sigma_w,data_weight)
     if( size(color,3) ~= 3 ),
 		error( 'color data must be of 3 channel' );
+    end
+    if ~exist( 'data_weight', 'var' ),
+        data_weight = 100;
     end
     height = size(color,1);
     width = size(color,2);
@@ -20,10 +24,10 @@ function result = AnisotropicDiffusion(color,depth,sigma_w)
     
     tic;
     depth = double(depth);
-    Z = sparse(reshape(depth,pixelNumber,1));
+    Z = sparse(reshape(depth,pixelNumber,1)) * data_weight;
    
     color = double(color);
-    S = ADMatrix(color,depth,sigma_w);
+    S = ADMatrix(color,depth,sigma_w,data_weight);
     
     fprintf('    The running time of getting A and b is %.5f s\n',toc);
     Result = S\Z;

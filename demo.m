@@ -118,11 +118,11 @@ s = [struct('string','Bilateral Filter','run',false)
      struct('string','Bilateral Upsampling','run',false)
      struct('string','Noise-aware Filter','run',false)
      struct('string','Weight Mode Filter','run',false)
-     struct('string','Anisotropic Diffusion','run',false)
+     struct('string','Anisotropic Diffusion','run',true)
      struct('string','Original Markov Random Field','run',false)
      struct('string','Markov Random Field(Second Order Smoothness)','run',false)
      struct('string','Markov Random Field(Kernel Data Term)','run',false)
-     struct('string','Markov Random Field(Tensor)','run',true)
+     struct('string','Markov Random Field(Tensor)','run',false)
      struct('string','Layered Bilateral Filter','run',false)
     ];
 
