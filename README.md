@@ -21,3 +21,6 @@ If you have any questions you can email to shshzaa@zju.edu.cn
 1. Markov Random Field(Tensor)
 1. Layered Bilateral Filter
 > Yang, Q., et al. Spatial-depth super resolution for range images. Computer Vision and Pattern Recognition, 2007.
+
+***
+transcend123 becomes the admin.
