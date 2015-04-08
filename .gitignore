@@ -1,0 +1,3 @@
+result/
+[\w\d./_\-]+\.(pdb|dll|exe|cache|suo|resources|rar|tlog|csv|bat|asv)
+[\w\d./_\-]+\.(user|rule|cmake|rule|obj|log|ilk|bin|check_cache|stamp|list|depend|lastbuildstate|sdf|oepnsdf|depend|lib|ipch|opensdf)
