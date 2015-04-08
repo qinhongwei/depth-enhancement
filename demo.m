@@ -14,9 +14,9 @@ clc;
 
 %% Read data
 
-Depth = imread('.\data\Teddy\GroundTruth.png');
+Depth = imread('./data/teddy/GroundTruth.png');
 % Depth = imresize(Depth,1/2,'nearest');
-Color = imread('.\data\Teddy\Color.png');
+Color = imread('./data/teddy/Color.png');
 % Color = imresize(Color,1/2,'nearest');
 % Depth = imread('.\data\synthetic\depth3.png');
 % Color = imread('.\data\synthetic\color3.png');
@@ -245,12 +245,15 @@ if(s(i).run)
 figure;
 imshow(uint8(Result),[0 255]);axis off
 title(s(i).string)
+if(~exist('result/','dir'))
+    mkdir('result');
+end;
 imwrite(uint8(Result),['./result/' s(i).string '.png'],'png')
 end
 %% Quantative evaluation
 if(s(i).run)
 rmse = sqrt(sum(sum((double(Result(DepthSection>0)) - double(DepthSection(DepthSection>0))).^2))/sum(sum((DepthSection>0))));
-fprintf(['¡ïRMSE of <' s(i).string '> is %.5f ¡ï\n'],rmse);
+fprintf(['ï¿½ï¿½RMSE of <' s(i).string '> is %.5f ï¿½ï¿½\n'],rmse);
 end
 %% synthetic surf show
 if(view_3d && s(i).run)
